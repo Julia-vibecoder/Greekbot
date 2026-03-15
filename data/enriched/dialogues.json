@@ -1,0 +1,170 @@
+[
+  {
+    "id": 1,
+    "title": "Στο καφέ",
+    "title_en": "At the café",
+    "situation": "Δύο φίλες συναντιούνται σε ένα καφέ και μιλάνε για τη δουλειά τους.",
+    "situation_en": "Two friends meet at a café and talk about their work.",
+    "theme": "Быт / повседневность + Работа / жизнь",
+    "level": "A2-B1",
+    "target_words": ["κουράστηκα", "ρουτίνα", "αύξηση", "σύμβαση", "διακοπές"],
+    "roles": ["Μαρία", "Ελένη"],
+    "lines": [
+      {"speaker": "Μαρία", "gr": "Γεια σου, Ελένη! Πάμε για καφέ;", "en": "Hi, Eleni! Shall we go for coffee?"},
+      {"speaker": "Ελένη", "gr": "Πάμε! Έχω κουραστεί πολύ σήμερα.", "en": "Let's go! I'm very tired today."},
+      {"speaker": "Μαρία", "gr": "Τι έγινε; Πάλι υπερωρίες;", "en": "What happened? Overtime again?"},
+      {"speaker": "Ελένη", "gr": "Ναι, δεν αντέχω τη ρουτίνα. Κάθε μέρα τα ίδια.", "en": "Yes, I can't stand the routine. Same thing every day."},
+      {"speaker": "Μαρία", "gr": "Σε καταλαβαίνω. Εγώ πήρα αύξηση, αλλά δουλεύω ακόμα πιο πολύ.", "en": "I understand you. I got a raise, but I work even more now."},
+      {"speaker": "Ελένη", "gr": "Μπράβο για την αύξηση! Η σύμβασή μου τελειώνει σε τρεις μήνες.", "en": "Congrats on the raise! My contract ends in three months."},
+      {"speaker": "Μαρία", "gr": "Μην αγχώνεσαι. Θα βρεις κάτι καλύτερο. Χρειαζόμαστε διακοπές!", "en": "Don't worry. You'll find something better. We need a vacation!"},
+      {"speaker": "Ελένη", "gr": "Ναι, χρειάζομαι διακοπές! Πάμε Κρήτη τον Αύγουστο;", "en": "Yes, I need a vacation! Shall we go to Crete in August?"}
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Στον γιατρό",
+    "title_en": "At the doctor",
+    "situation": "Ένας ασθενής πηγαίνει στον γιατρό γιατί νιώθει κουρασμένος.",
+    "situation_en": "A patient goes to the doctor because they feel tired.",
+    "theme": "Давление / усталость + Повседневная жизнь",
+    "level": "A2-B1",
+    "target_words": ["εξαντλήθηκα", "πίεση", "παύση", "ρυθμός", "ισορροπία"],
+    "roles": ["Γιατρός", "Νίκος"],
+    "lines": [
+      {"speaker": "Γιατρός", "gr": "Καλημέρα, Νίκο. Πώς πάει; Τι νέα;", "en": "Good morning, Nikos. How's it going? What's new?"},
+      {"speaker": "Νίκος", "gr": "Γιατρέ, δε μπορώ άλλο, εξαντλήθηκα.", "en": "Doctor, I can't anymore, I'm exhausted."},
+      {"speaker": "Γιατρός", "gr": "Τι ακριβώς νιώθετε; Πόσο κοιμάστε;", "en": "What exactly do you feel? How much do you sleep?"},
+      {"speaker": "Νίκος", "gr": "Πιέζομαι πολύ στη δουλειά. Δεν αντέχω αυτόν τον ρυθμό.", "en": "I'm under a lot of pressure at work. I can't handle this pace."},
+      {"speaker": "Γιατρός", "gr": "Χρειάζεστε μια παύση. Πότε πήρατε τελευταία φορά διακοπές;", "en": "You need a break. When did you last take a vacation?"},
+      {"speaker": "Νίκος", "gr": "Δεν θυμάμαι! Τρέχω όλη μέρα, δεν παίρνω ανάσα.", "en": "I don't remember! I'm running around all day, can't catch my breath."},
+      {"speaker": "Γιατρός", "gr": "Πρέπει να βρείτε ισορροπία. Σιγά σιγά, μέρα με τη μέρα.", "en": "You need to find balance. Little by little, day by day."},
+      {"speaker": "Νίκος", "gr": "Έχετε δίκιο. Θα προσπαθήσω να μην παίρνω τόσα πάνω μου.", "en": "You're right. I'll try not to take on so much."}
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Φιλικός καβγάς",
+    "title_en": "A friendly argument",
+    "situation": "Δύο φίλοι διαφωνούν για ένα θέμα αλλά βρίσκουν λύση.",
+    "situation_en": "Two friends disagree about something but find a solution.",
+    "theme": "Конфликт / напряжение + Поддержка / тепло",
+    "level": "A2-B1",
+    "target_words": ["διαφωνώ", "δίκαιο", "σεβασμός", "λύση", "μαζί"],
+    "roles": ["Κώστας", "Δημήτρης"],
+    "lines": [
+      {"speaker": "Κώστας", "gr": "Δεν είναι δίκαιο αυτό που λες, Δημήτρη.", "en": "What you're saying isn't fair, Dimitris."},
+      {"speaker": "Δημήτρης", "gr": "Μη μιλάς έτσι. Δεν ήθελα να σε πληγώσω.", "en": "Don't talk like that. I didn't mean to hurt you."},
+      {"speaker": "Κώστας", "gr": "Γιατί πάντα τα ίδια λέμε; Κάτσε να τα πούμε ήρεμα.", "en": "Why do we always say the same things? Let's sit and talk calmly."},
+      {"speaker": "Δημήτρης", "gr": "Συμφωνώ. Δεν ωφελεί να φωνάζουμε.", "en": "I agree. Shouting won't help."},
+      {"speaker": "Κώστας", "gr": "Σε καταλαβαίνω, αλλά δεν συμφωνώ καθόλου.", "en": "I understand you, but I completely disagree."},
+      {"speaker": "Δημήτρης", "gr": "Έχεις ένα δίκιο. Ας δούμε τα γεγονότα αντικειμενικά.", "en": "You have a point. Let's look at the facts objectively."},
+      {"speaker": "Κώστας", "gr": "Θα βρούμε λύση μαζί. Δεν είσαι μόνος σε αυτό.", "en": "We'll find a solution together. You're not alone in this."},
+      {"speaker": "Δημήτρης", "gr": "Ευχαριστώ, φίλε. Μαζί θα τα βγάλουμε πέρα.", "en": "Thanks, friend. Together we'll get through it."}
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Στο σούπερ μάρκετ",
+    "title_en": "At the supermarket",
+    "situation": "Ένα ζευγάρι ψωνίζει στο σούπερ μάρκετ και συζητά για τα έξοδα.",
+    "situation_en": "A couple shops at the supermarket and discusses expenses.",
+    "theme": "Быт / повседневность + Оценка ситуации",
+    "level": "A2",
+    "target_words": ["λογαριασμός", "ακριβός", "ανάγκες", "δαπάνη", "οφειλή"],
+    "roles": ["Άννα", "Γιάννης"],
+    "lines": [
+      {"speaker": "Άννα", "gr": "Μας τελείωσε το γάλα. Πρέπει να ψωνίσω λίγα πράγματα.", "en": "We ran out of milk. I need to buy a few things."},
+      {"speaker": "Γιάννης", "gr": "Πρόσεχε τον λογαριασμό! Τον τελευταίο μήνα ήταν πολύ ακριβός.", "en": "Watch the bill! Last month it was very expensive."},
+      {"speaker": "Άννα", "gr": "Τα λεφτά δεν καλύπτουν τις ανάγκες μας.", "en": "The money doesn't cover our needs."},
+      {"speaker": "Γιάννης", "gr": "Η δαπάνη για φαγητό αυξήθηκε πολύ φέτος.", "en": "The food expense has increased a lot this year."},
+      {"speaker": "Άννα", "gr": "Ξέρω. Και πρέπει να εξοφλήσουμε τον λογαριασμό του ρεύματος.", "en": "I know. And we need to pay off the electricity bill."},
+      {"speaker": "Γιάννης", "gr": "Έχουμε κι άλλη οφειλή, μην ξεχνάς.", "en": "We have another debt too, don't forget."},
+      {"speaker": "Άννα", "gr": "Δεν ξεχνάω. Ας τα βάλουμε σε σειρά.", "en": "I'm not forgetting. Let's put things in order."},
+      {"speaker": "Γιάννης", "gr": "Εντάξει, τα αναλαμβάνω εγώ. Θα φτιάξω ένα πλάνο.", "en": "OK, I'll handle it. I'll make a plan."}
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Πολιτική συζήτηση",
+    "title_en": "Political discussion",
+    "situation": "Δύο φοιτητές συζητούν για την κατάσταση στη χώρα.",
+    "situation_en": "Two students discuss the situation in the country.",
+    "theme": "Социальный контекст + Позиция / аргументация",
+    "level": "B1-B2",
+    "target_words": ["θεσμοί", "εμπιστοσύνη", "κρίση", "ανάγκη", "προσέγγιση"],
+    "roles": ["Σοφία", "Αλέξης"],
+    "lines": [
+      {"speaker": "Σοφία", "gr": "Η εμπιστοσύνη προς τους θεσμούς έχει κλονιστεί.", "en": "Trust in institutions has been shaken."},
+      {"speaker": "Αλέξης", "gr": "Συμφωνώ. Η κατάσταση έχει περιπλακεί σημαντικά.", "en": "I agree. The situation has become significantly more complex."},
+      {"speaker": "Σοφία", "gr": "Κατά τη γνώμη μου, χρειάζεται αλλαγή. Πρόκειται για δομικό πρόβλημα.", "en": "In my opinion, a change is needed. It's a structural problem."},
+      {"speaker": "Αλέξης", "gr": "Ωστόσο, πρέπει να εξετάσουμε και τις συνέπειες.", "en": "However, we must also consider the consequences."},
+      {"speaker": "Σοφία", "gr": "Δεν μπορούμε να αγνοήσουμε αυτό το γεγονός. Χρειάζεται πιο σύνθετη προσέγγιση.", "en": "We cannot ignore this fact. A more complex approach is needed."},
+      {"speaker": "Αλέξης", "gr": "Από αυτήν την άποψη, έχεις δίκιο. Αλλά οι συνέπειες ενδέχεται να είναι μακροπρόθεσμες.", "en": "From this perspective, you're right. But the consequences may be long-term."},
+      {"speaker": "Σοφία", "gr": "Ας το δούμε ρεαλιστικά. Απαιτείται ψύχραιμη προσέγγιση.", "en": "Let's look at it realistically. A calm approach is required."},
+      {"speaker": "Αλέξης", "gr": "Συνοψίζοντας, πρέπει να λάβουμε υπόψη μας πολλά πράγματα.", "en": "In summary, we need to take many things into account."}
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Φιλική στήριξη",
+    "title_en": "Friendly support",
+    "situation": "Μια φίλη στηρίζει την άλλη που περνά δύσκολα.",
+    "situation_en": "A friend supports another who is going through hard times.",
+    "theme": "Эмоции + Поддержка / тепло",
+    "level": "A2-B1",
+    "target_words": ["στεναχωρήθηκα", "φοβάμαι", "κενό", "δυνατός", "λύση"],
+    "roles": ["Κατερίνα", "Ιωάννα"],
+    "lines": [
+      {"speaker": "Κατερίνα", "gr": "Ιωάννα, τι έχεις; Φαίνεσαι στεναχωρημένη.", "en": "Ioanna, what's wrong? You look upset."},
+      {"speaker": "Ιωάννα", "gr": "Στεναχωρήθηκα πολύ. Νιώθω κενό μέσα μου.", "en": "I'm very upset. I feel empty inside."},
+      {"speaker": "Κατερίνα", "gr": "Σε νιώθω. Πες μου τι χρειάζεσαι.", "en": "I feel you. Tell me what you need."},
+      {"speaker": "Ιωάννα", "gr": "Φοβάμαι ότι δεν θα τα καταφέρω.", "en": "I'm afraid I won't make it."},
+      {"speaker": "Κατερίνα", "gr": "Μη φοβάσαι. Κράτα γερά, είσαι δυνατή!", "en": "Don't be afraid. Stay strong, you're tough!"},
+      {"speaker": "Ιωάννα", "gr": "Με πληγώνεις αν δεν μου λες την αλήθεια.", "en": "It hurts me if you don't tell me the truth."},
+      {"speaker": "Κατερίνα", "gr": "Πάντα θα είμαι δίπλα σου. Θα βρούμε λύση μαζί.", "en": "I'll always be by your side. We'll find a solution together."},
+      {"speaker": "Ιωάννα", "gr": "Ευχαριστώ. Αισθάνομαι ευγνωμοσύνη. Τα πάντα θα πάνε καλά.", "en": "Thank you. I feel gratitude. Everything will be fine."}
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Σαρκασμός μεταξύ φίλων",
+    "title_en": "Sarcasm between friends",
+    "situation": "Δύο φίλοι σχολιάζουν μια αποτυχημένη εκδρομή με χιούμορ.",
+    "situation_en": "Two friends comment on a failed trip with humor.",
+    "theme": "Лёгкий сарказм / ирония + Спонтанная реакция",
+    "level": "B1",
+    "target_words": ["τέλεια", "πρωτότυπο", "φυσικά", "σώθηκες", "ξέχασα"],
+    "roles": ["Πέτρος", "Θανάσης"],
+    "lines": [
+      {"speaker": "Πέτρος", "gr": "Πω πω, τι ωραία εκδρομή ήταν αυτή!", "en": "Wow, what a lovely trip that was!"},
+      {"speaker": "Θανάσης", "gr": "Τέλεια, ακριβώς αυτό που ήθελα – βροχή και λάσπη.", "en": "Perfect, exactly what I wanted – rain and mud."},
+      {"speaker": "Πέτρος", "gr": "Φυσικά, γιατί να ήταν εύκολο; Και ξέχασα την ομπρέλα!", "en": "Of course, why would it be easy? And I forgot the umbrella!"},
+      {"speaker": "Θανάσης", "gr": "Πρωτότυπο, δεν το είχα ακούσει ποτέ αυτό από σένα.", "en": "Original, I've never heard that from you before."},
+      {"speaker": "Πέτρος", "gr": "Ε ναι, πάντα εγώ φταίω. Μπράβο μας!", "en": "Of course, it's always my fault. Good for us!"},
+      {"speaker": "Θανάσης", "gr": "Σώθηκες που βρήκαμε εκείνο το καφέ. Αλλιώς θα πνιγόμασταν!", "en": "You're saved because we found that café. Otherwise we'd drown!"},
+      {"speaker": "Πέτρος", "gr": "Έλα τώρα! Δεν ήταν τόσο άσχημα. Τρελαίνομαι που γκρινιάζεις!", "en": "Come on now! It wasn't that bad. You drive me crazy with your complaining!"},
+      {"speaker": "Θανάσης", "gr": "Εντάξει, εντάξει. Την επόμενη φορά κοιτάμε τον καιρό πρώτα!", "en": "OK, OK. Next time let's check the weather first!"}
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Εξετάσεις και στρες",
+    "title_en": "Exams and stress",
+    "situation": "Δύο φοιτητές μιλούν πριν τις εξετάσεις.",
+    "situation_en": "Two students talk before exams.",
+    "theme": "Γ2 exam + Решение / действие",
+    "level": "B1-B2",
+    "target_words": ["συνειδητοποιώ", "προσήλωση", "εκτίμηση", "αφομοιώσει", "πρόοδος"],
+    "roles": ["Λίνα", "Στέφανος"],
+    "lines": [
+      {"speaker": "Λίνα", "gr": "Τώρα συνειδητοποιώ πόσο δύσκολες είναι οι εξετάσεις.", "en": "Now I realize how difficult the exams are."},
+      {"speaker": "Στέφανος", "gr": "Χρειάζεται προσήλωση. Ας μην αναβάλλουμε άλλο.", "en": "It takes dedication. Let's not postpone any longer."},
+      {"speaker": "Λίνα", "gr": "Δεν μπορώ να αφομοιώσω τόση ύλη σε λίγες μέρες!", "en": "I can't assimilate so much material in a few days!"},
+      {"speaker": "Στέφανος", "gr": "Σημειώνεις πρόοδο κάθε μέρα. Μη φοβάσαι.", "en": "You're making progress every day. Don't be afraid."},
+      {"speaker": "Λίνα", "gr": "Δείχνεις εκτίμηση για τη δουλειά μου. Ευχαριστώ.", "en": "You show appreciation for my work. Thanks."},
+      {"speaker": "Στέφανος", "gr": "Πρέπει να μιλήσουμε ξεκάθαρα: αρκετά σκεφτήκαμε, ώρα για δράση!", "en": "Let's speak clearly: we've thought enough, time for action!"},
+      {"speaker": "Λίνα", "gr": "Πήρα την απόφαση. Θα διαβάζω πέντε ώρες τη μέρα.", "en": "I've made my decision. I'll study five hours a day."},
+      {"speaker": "Στέφανος", "gr": "Μπράβο! Να το πάρουμε από την αρχή, μαζί.", "en": "Bravo! Let's start from scratch, together."}
+    ]
+  }
+]
