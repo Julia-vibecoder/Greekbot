@@ -382,8 +382,13 @@ async def show_answer_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("Сессия завершена. /learn для новой.")
         return
 
-    text, keyboard = render_answer(words[idx], idx, len(words))
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
+    try:
+        text, keyboard = render_answer(words[idx], idx, len(words))
+        await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Error showing answer for word {idx}: {e}")
+        text, keyboard = render_answer(words[idx], idx, len(words))
+        await query.edit_message_text(text, reply_markup=keyboard)
 
 
 async def show_details_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -483,24 +488,29 @@ async def _advance_session(query, context, words, idx, topic):
     next_idx = idx + 1
     context.user_data["current_index"] = next_idx
 
-    if next_idx >= len(words):
-        increment_session(DB, user_id)
-        stats = get_stats(DB, user_id)
-        summary = render_session_summary(stats, len(words), topic)
+    try:
+        if next_idx >= len(words):
+            increment_session(DB, user_id)
+            stats = get_stats(DB, user_id)
+            summary = render_session_summary(stats, len(words), topic)
 
-        # Show achievements earned during the session
-        achs = context.user_data.pop("pending_achievements", [])
-        if achs:
-            summary += "\n\n" + render_achievements(achs)
+            achs = context.user_data.pop("pending_achievements", [])
+            if achs:
+                summary += "\n\n" + render_achievements(achs)
 
-        await query.edit_message_text(summary, parse_mode="HTML")
-        return
+            await query.edit_message_text(summary, parse_mode="HTML")
+            return
 
-    emoji, label = TOPIC_LABELS.get(topic, ("📌", topic))
-    topic_label = f"{emoji} {label}"
+        emoji, label = TOPIC_LABELS.get(topic, ("📌", topic))
+        topic_label = f"{emoji} {label}"
 
-    text, keyboard = render_question(words[next_idx], next_idx, len(words), topic_label)
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
+        text, keyboard = render_question(words[next_idx], next_idx, len(words), topic_label)
+        await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Error advancing session at word {next_idx}: {e}")
+        # Skip broken card, try next
+        context.user_data["current_index"] = next_idx
+        await _advance_session(query, context, words, next_idx, topic)
 
 
 async def skip_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -511,7 +521,7 @@ async def skip_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     idx = context.user_data.get("current_index", 0)
     topic = context.user_data.get("session_topic", "all")
 
-    _advance_session(query, context, words, idx, topic)
+    await _advance_session(query, context, words, idx, topic)
 
 
 async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
