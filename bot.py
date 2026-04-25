@@ -247,7 +247,7 @@ def render_topic_menu(user_id):
     ]
 
     buttons = []
-    for topic in sorted(topic_counts.keys()):
+    for topic in sorted(topic_counts.keys(), key=lambda t: -topic_counts[t]):
         emoji, label = TOPIC_LABELS.get(topic, ("📌", topic))
         total = topic_counts[topic]
         tp = topic_progress.get(topic, {})
