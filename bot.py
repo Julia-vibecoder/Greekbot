@@ -256,13 +256,17 @@ def render_topic_menu(user_id):
         due = tp.get("due", 0)
 
         pct = int(seen / total * 100) if total else 0
-        bar = "▓" * (pct // 10) + "░" * (10 - pct // 10)
 
         status = ""
         if due > 0:
-            status = f" 🔔{due}"
+            status = f"  🔔 {due} на повтор"
 
-        lines.append(f"{emoji} <b>{label}</b>: {seen}/{total} {bar}{status}")
+        if seen == 0:
+            progress = ""
+        else:
+            progress = f" · {pct}%"
+
+        lines.append(f"{emoji} <b>{label}</b>  {seen}/{total}{progress}{status}")
 
         btn_text = f"{emoji} {label} ({total})"
         if due > 0:
