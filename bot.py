@@ -54,12 +54,24 @@ TOPIC_LABELS = {
     "environment": ("🌿", "Περιβάλλον"),
 }
 
+# ── Helpers ─────────────────────────────────────────────────────
+
+from html import escape as html_escape
+
+
+def safe(text):
+    """Escape HTML special chars in user data."""
+    if not text:
+        return ""
+    return html_escape(str(text), quote=False)
+
+
 # ── Card rendering ──────────────────────────────────────────────
 
 
 def render_question(word, index, total, topic_label=""):
     """Show greek word, user tries to recall meaning."""
-    greek = word["greek"]
+    greek = safe(word["greek"])
     rep = word.get("_rep", 0)
 
     if rep >= 1:
@@ -83,9 +95,9 @@ def render_question(word, index, total, topic_label=""):
 
 def render_answer(word, index, total):
     """Show answer with 'Помню' / 'Новое слово' buttons."""
-    greek = word["greek"]
-    russian = word.get("russian", "")
-    english = word.get("english", "")
+    greek = safe(word["greek"])
+    russian = safe(word.get("russian", ""))
+    english = safe(word.get("english", ""))
     rep = word.get("_rep", 0)
 
     lines = [f"[{index + 1}/{total}]\n"]
@@ -96,8 +108,8 @@ def render_answer(word, index, total):
         lines.append(f"🇬🇧  {english}")
     lines.append("")
 
-    ex1 = word.get("example1", "")
-    ex1_en = word.get("example1_en", "")
+    ex1 = safe(word.get("example1", ""))
+    ex1_en = safe(word.get("example1_en", ""))
     if ex1:
         lines.append("📝 <b>Прочитай вслух:</b>")
         lines.append(f"<i>{ex1}</i>")
@@ -105,9 +117,9 @@ def render_answer(word, index, total):
             lines.append(f"({ex1_en})")
         lines.append("")
 
-    root = word.get("root", "")
+    root = safe(word.get("root", ""))
     if root:
-        root_family = word.get("root_family", "")
+        root_family = safe(word.get("root_family", ""))
         lines.append(f"🌱 <b>Корень:</b> {root}")
         if root_family:
             lines.append(f"    {root_family}")
@@ -132,9 +144,9 @@ def render_answer(word, index, total):
 
 def render_answer_full(word, index, total):
     """Full card with all fields."""
-    greek = word["greek"]
-    russian = word.get("russian", "")
-    english = word.get("english", "")
+    greek = safe(word["greek"])
+    russian = safe(word.get("russian", ""))
+    english = safe(word.get("english", ""))
     rep = word.get("_rep", 0)
 
     lines = [f"[{index + 1}/{total}]\n"]
@@ -145,16 +157,16 @@ def render_answer_full(word, index, total):
         lines.append(f"🇬🇧  {english}")
     lines.append("")
 
-    root = word.get("root", "")
-    root_family = word.get("root_family", "")
+    root = safe(word.get("root", ""))
+    root_family = safe(word.get("root_family", ""))
     if root:
         lines.append(f"🌱 <b>Корень:</b> {root}")
         if root_family:
             lines.append(f"    {root_family}")
         lines.append("")
 
-    verb_p = word.get("verb_partner", "")
-    adj_p = word.get("adjective_partner", "")
+    verb_p = safe(word.get("verb_partner", ""))
+    adj_p = safe(word.get("adjective_partner", ""))
     if verb_p or adj_p:
         lines.append("🤝 <b>Сочетания:</b>")
         if verb_p:
@@ -168,8 +180,8 @@ def render_answer_full(word, index, total):
         ("🔄 Ещё пример:", "example2", "example2_en"),
         ("📖 Третий пример:", "example3", "example3_en"),
     ]):
-        ex = word.get(key, "")
-        ex_en = word.get(key_en, "")
+        ex = safe(word.get(key, ""))
+        ex_en = safe(word.get(key_en, ""))
         if ex:
             lines.append(f"<b>{label}</b>")
             lines.append(f"<i>{ex}</i>")
@@ -177,7 +189,7 @@ def render_answer_full(word, index, total):
                 lines.append(f"({ex_en})")
             lines.append("")
 
-    collocs = word.get("collocations", "")
+    collocs = safe(word.get("collocations", ""))
     if collocs:
         parts = [c.strip() for c in collocs.split(";") if c.strip()][:3]
         if parts:
@@ -186,8 +198,8 @@ def render_answer_full(word, index, total):
                 lines.append(f"  • {c}")
             lines.append("")
 
-    syn = word.get("synonyms", "")
-    ant = word.get("antonyms", "")
+    syn = safe(word.get("synonyms", ""))
+    ant = safe(word.get("antonyms", ""))
     if syn:
         lines.append(f"≈ <b>Синонимы:</b> {syn}")
     if ant:
@@ -195,20 +207,20 @@ def render_answer_full(word, index, total):
     if syn or ant:
         lines.append("")
 
-    dialogue = word.get("mini_dialogue", "")
+    dialogue = safe(word.get("mini_dialogue", ""))
     if dialogue:
         lines.append("💬 <b>Диалог:</b>")
         lines.append(f"<i>{dialogue}</i>")
         lines.append("")
 
     meta_parts = []
-    level = word.get("level", "")
+    level = safe(word.get("level", ""))
     if level:
         meta_parts.append(f"📊 {level}")
-    register = word.get("register", "")
+    register = safe(word.get("register", ""))
     if register:
         meta_parts.append(f"📋 {register}")
-    frequency = word.get("frequency", "")
+    frequency = safe(word.get("frequency", ""))
     if frequency:
         meta_parts.append(f"⚡ {frequency}")
     if meta_parts:
@@ -387,8 +399,16 @@ async def show_answer_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
     except Exception as e:
         logger.error(f"Error showing answer for word {idx}: {e}")
-        text, keyboard = render_answer(words[idx], idx, len(words))
-        await query.edit_message_text(text, reply_markup=keyboard)
+        # Fallback: plain text without HTML
+        w = words[idx]
+        fallback = f"[{idx+1}/{len(words)}]\n\n{w['greek']}\n{w.get('russian','')}\n{w.get('english','')}"
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("✅ Помню", callback_data="know"),
+                InlineKeyboardButton("🆕 Новое слово", callback_data="new_word"),
+            ],
+        ])
+        await query.edit_message_text(fallback, reply_markup=keyboard)
 
 
 async def show_details_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -622,6 +642,11 @@ def main():
     app.add_handler(CallbackQueryHandler(skip_callback, pattern=r"^skip$"))
     app.add_handler(CallbackQueryHandler(reset_confirm_callback, pattern=r"^reset_confirm$"))
     app.add_handler(CallbackQueryHandler(reset_cancel_callback, pattern=r"^reset_cancel$"))
+
+    # Global error handler — bot never dies silently
+    async def error_handler(update, context):
+        logger.error(f"Update {update} caused error: {context.error}")
+    app.add_error_handler(error_handler)
 
     logger.info("Bot started!")
     app.run_polling()
