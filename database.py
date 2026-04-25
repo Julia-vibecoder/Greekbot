@@ -242,6 +242,67 @@ def get_topic_stats(conn, user_id, vocab):
     return stats
 
 
+def check_achievements(conn, user_id, word_index, vocab, topic_counts):
+    """Check if an achievement was unlocked. Returns list of achievement strings."""
+    achievements = []
+
+    # 1. Word mastered (9/9)
+    row = conn.execute(
+        "SELECT repetition FROM user_progress WHERE user_id = ? AND word_index = ?",
+        (user_id, word_index),
+    ).fetchone()
+    if row and row["repetition"] >= 9:
+        achievements.append("mastered_word")
+
+    # 2. Topic fully seen (all words marked as помню or in cycle)
+    # Find the topic of this word
+    word_topic = None
+    for w in vocab:
+        if w["_index"] == word_index:
+            word_topic = w.get("topic", "")
+            break
+
+    if word_topic and word_topic in topic_counts:
+        topic_total = topic_counts[word_topic]
+        # Count how many words of this topic the user has seen
+        topic_indices = [w["_index"] for w in vocab if w.get("topic") == word_topic]
+        placeholders = ",".join("?" * len(topic_indices))
+        seen_count = conn.execute(
+            f"SELECT COUNT(*) as cnt FROM user_progress "
+            f"WHERE user_id = ? AND word_index IN ({placeholders}) "
+            f"AND next_review IS NOT NULL",
+            (user_id, *topic_indices),
+        ).fetchone()["cnt"]
+
+        if seen_count >= topic_total:
+            achievements.append(("topic_complete", word_topic))
+
+        # 3. All words in topic mastered (9/9)
+        mastered_count = conn.execute(
+            f"SELECT COUNT(*) as cnt FROM user_progress "
+            f"WHERE user_id = ? AND word_index IN ({placeholders}) "
+            f"AND repetition >= 9",
+            (user_id, *topic_indices),
+        ).fetchone()["cnt"]
+
+        if mastered_count >= topic_total:
+            achievements.append(("topic_mastered", word_topic))
+
+    # 4. Milestone achievements (total words seen)
+    total_seen = conn.execute(
+        "SELECT COUNT(*) as cnt FROM user_progress "
+        "WHERE user_id = ? AND next_review IS NOT NULL",
+        (user_id,),
+    ).fetchone()["cnt"]
+
+    milestones = [100, 500, 1000, 2000, 3000, 4000, 4630]
+    for m in milestones:
+        if total_seen == m:
+            achievements.append(("milestone", m))
+
+    return achievements
+
+
 def reset_progress(conn, user_id):
     conn.execute("DELETE FROM user_progress WHERE user_id = ?", (user_id,))
     conn.execute(

@@ -21,6 +21,7 @@ from telegram.ext import (
 )
 
 from database import (
+    check_achievements,
     get_stats,
     get_topic_stats,
     get_user_settings,
@@ -399,6 +400,34 @@ async def show_details_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
+def render_achievements(achievements):
+    """Render achievement notifications."""
+    lines = []
+    for a in achievements:
+        if a == "mastered_word":
+            lines.append("🏅 <b>Слово выучено!</b> 9/9 повторений!")
+        elif isinstance(a, tuple):
+            kind, val = a
+            if kind == "topic_complete":
+                emoji, label = TOPIC_LABELS.get(val, ("📌", val))
+                lines.append(f"🏆 <b>Тема пройдена!</b> {emoji} {label} — все слова просмотрены!")
+            elif kind == "topic_mastered":
+                emoji, label = TOPIC_LABELS.get(val, ("📌", val))
+                lines.append(f"👑 <b>Тема покорена!</b> {emoji} {label} — все слова выучены на 9/9!")
+            elif kind == "milestone":
+                labels = {
+                    100: "💯 <b>Первая сотня!</b> 100 слов просмотрено!",
+                    500: "🔥 <b>500 слов!</b> Ты на верном пути!",
+                    1000: "⭐ <b>1000 слов!</b> Серьёзный уровень!",
+                    2000: "🌟 <b>2000 слов!</b> Половина словаря!",
+                    3000: "💎 <b>3000 слов!</b> Ты почти у цели!",
+                    4000: "🚀 <b>4000 слов!</b> Финишная прямая!",
+                    4630: "🎊 <b>ВСЕ 4630 СЛОВ!</b> Словарь пройден полностью!",
+                }
+                lines.append(labels.get(val, f"🎯 <b>{val} слов просмотрено!</b>"))
+    return "\n".join(lines)
+
+
 async def know_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """User pressed 'Помню'."""
     query = update.callback_query
@@ -414,13 +443,16 @@ async def know_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     word = words[idx]
     if word.get("_rep", 0) >= 1:
-        # In review cycle — advance repetition
         record_review(DB, user_id, word["_index"])
     else:
-        # Unseen word — mark as known
         mark_known(DB, user_id, word["_index"])
 
-    _advance_session(query, context, words, idx, topic)
+    vocab = load_vocabulary()
+    achs = check_achievements(DB, user_id, word["_index"], vocab, get_topic_counts(vocab))
+    if achs:
+        context.user_data.setdefault("pending_achievements", []).extend(achs)
+
+    await _advance_session(query, context, words, idx, topic)
 
 
 async def new_word_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -438,7 +470,12 @@ async def new_word_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     mark_new_word(DB, user_id, words[idx]["_index"])
 
-    _advance_session(query, context, words, idx, topic)
+    vocab = load_vocabulary()
+    achs = check_achievements(DB, user_id, words[idx]["_index"], vocab, get_topic_counts(vocab))
+    if achs:
+        context.user_data.setdefault("pending_achievements", []).extend(achs)
+
+    await _advance_session(query, context, words, idx, topic)
 
 
 async def _advance_session(query, context, words, idx, topic):
@@ -450,6 +487,12 @@ async def _advance_session(query, context, words, idx, topic):
         increment_session(DB, user_id)
         stats = get_stats(DB, user_id)
         summary = render_session_summary(stats, len(words), topic)
+
+        # Show achievements earned during the session
+        achs = context.user_data.pop("pending_achievements", [])
+        if achs:
+            summary += "\n\n" + render_achievements(achs)
+
         await query.edit_message_text(summary, parse_mode="HTML")
         return
 
