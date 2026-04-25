@@ -1,7 +1,7 @@
 """
 Greek Vocabulary Telegram Bot.
-Brezhestovsky method: 9 repetitions over 23 days.
-Words organized and shown by topic.
+Words shown by topic. User marks each as "Помню" or "Новое слово".
+New words enter a 9-repetition spaced cycle and appear more often.
 """
 import logging
 import os
@@ -26,6 +26,8 @@ from database import (
     get_user_settings,
     increment_session,
     init_db,
+    mark_known,
+    mark_new_word,
     record_review,
     reset_progress,
     set_topic,
@@ -39,29 +41,30 @@ logger = logging.getLogger(__name__)
 DB = init_db()
 
 TOPIC_LABELS = {
-    "politics": ("🏛", "Πολιτική"),
     "society": ("👥", "Κοινωνία"),
-    "economy": ("💰", "Οικονομία"),
-    "technology": ("💻", "Τεχνολογία"),
-    "environment": ("🌿", "Περιβάλλον"),
-    "education": ("🎓", "Εκπαίδευση"),
-    "culture": ("🎭", "Πολιτισμός"),
-    "philosophy": ("🤔", "Φιλοσοφία"),
-    "psychology": ("🧠", "Ψυχολογία"),
-    "media": ("📺", "ΜΜΕ"),
-    "international_relations": ("🌍", "Διεθνείς σχέσεις"),
-    "law": ("⚖️", "Δίκαιο"),
     "health": ("🏥", "Υγεία"),
-    "daily_life": ("🏠", "Καθημερινότητα"),
+    "culture": ("🎭", "Πολιτισμός"),
+    "economy": ("💰", "Οικονομία"),
+    "science": ("🔬", "Επιστήμη"),
+    "politics": ("🏛", "Πολιτική"),
+    "history": ("📜", "Ιστορία"),
+    "education": ("🎓", "Εκπαίδευση"),
+    "law": ("⚖️", "Δίκαιο"),
+    "environment": ("🌿", "Περιβάλλον"),
 }
 
 # ── Card rendering ──────────────────────────────────────────────
 
 
 def render_question(word, index, total, topic_label=""):
+    """Show greek word, user tries to recall meaning."""
     greek = word["greek"]
     rep = word.get("_rep", 0)
-    rep_info = f"  🔄 {rep}/9" if rep else "  🆕"
+
+    if rep >= 1:
+        rep_info = f"  🔄 {rep}/9"
+    else:
+        rep_info = ""
 
     header = f"<b>{topic_label}</b>\n" if topic_label else ""
     text = (
@@ -78,20 +81,69 @@ def render_question(word, index, total, topic_label=""):
 
 
 def render_answer(word, index, total):
+    """Show answer with 'Помню' / 'Новое слово' buttons."""
     greek = word["greek"]
     russian = word.get("russian", "")
     english = word.get("english", "")
+    rep = word.get("_rep", 0)
 
     lines = [f"[{index + 1}/{total}]\n"]
     lines.append(f"🇬🇷  <b>{greek}</b>")
-
     if russian:
         lines.append(f"🇷🇺  {russian}")
     if english:
         lines.append(f"🇬🇧  {english}")
     lines.append("")
 
-    # Root & family
+    ex1 = word.get("example1", "")
+    ex1_en = word.get("example1_en", "")
+    if ex1:
+        lines.append("📝 <b>Прочитай вслух:</b>")
+        lines.append(f"<i>{ex1}</i>")
+        if ex1_en:
+            lines.append(f"({ex1_en})")
+        lines.append("")
+
+    root = word.get("root", "")
+    if root:
+        root_family = word.get("root_family", "")
+        lines.append(f"🌱 <b>Корень:</b> {root}")
+        if root_family:
+            lines.append(f"    {root_family}")
+
+    text = "\n".join(lines)
+
+    if rep >= 1:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Помню", callback_data="know")],
+            [InlineKeyboardButton("📖 Подробнее", callback_data="show_details")],
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("✅ Помню", callback_data="know"),
+                InlineKeyboardButton("🆕 Новое слово", callback_data="new_word"),
+            ],
+            [InlineKeyboardButton("📖 Подробнее", callback_data="show_details")],
+        ])
+    return text, keyboard
+
+
+def render_answer_full(word, index, total):
+    """Full card with all fields."""
+    greek = word["greek"]
+    russian = word.get("russian", "")
+    english = word.get("english", "")
+    rep = word.get("_rep", 0)
+
+    lines = [f"[{index + 1}/{total}]\n"]
+    lines.append(f"🇬🇷  <b>{greek}</b>")
+    if russian:
+        lines.append(f"🇷🇺  {russian}")
+    if english:
+        lines.append(f"🇬🇧  {english}")
+    lines.append("")
+
     root = word.get("root", "")
     root_family = word.get("root_family", "")
     if root:
@@ -100,7 +152,6 @@ def render_answer(word, index, total):
             lines.append(f"    {root_family}")
         lines.append("")
 
-    # Verb & adjective partners
     verb_p = word.get("verb_partner", "")
     adj_p = word.get("adjective_partner", "")
     if verb_p or adj_p:
@@ -111,37 +162,20 @@ def render_answer(word, index, total):
             lines.append(f"  🔸 {adj_p}")
         lines.append("")
 
-    # Example 1
-    ex1 = word.get("example1", "")
-    ex1_en = word.get("example1_en", "")
-    if ex1:
-        lines.append("📝 <b>Прочитай вслух:</b>")
-        lines.append(f"<i>{ex1}</i>")
-        if ex1_en:
-            lines.append(f"({ex1_en})")
-        lines.append("")
+    for i, (label, key, key_en) in enumerate([
+        ("📝 Прочитай вслух:", "example1", "example1_en"),
+        ("🔄 Ещё пример:", "example2", "example2_en"),
+        ("📖 Третий пример:", "example3", "example3_en"),
+    ]):
+        ex = word.get(key, "")
+        ex_en = word.get(key_en, "")
+        if ex:
+            lines.append(f"<b>{label}</b>")
+            lines.append(f"<i>{ex}</i>")
+            if ex_en:
+                lines.append(f"({ex_en})")
+            lines.append("")
 
-    # Example 2
-    ex2 = word.get("example2", "")
-    ex2_en = word.get("example2_en", "")
-    if ex2:
-        lines.append("🔄 <b>Ещё пример:</b>")
-        lines.append(f"<i>{ex2}</i>")
-        if ex2_en:
-            lines.append(f"({ex2_en})")
-        lines.append("")
-
-    # Example 3
-    ex3 = word.get("example3", "")
-    ex3_en = word.get("example3_en", "")
-    if ex3:
-        lines.append("📖 <b>Третий пример:</b>")
-        lines.append(f"<i>{ex3}</i>")
-        if ex3_en:
-            lines.append(f"({ex3_en})")
-        lines.append("")
-
-    # Collocations
     collocs = word.get("collocations", "")
     if collocs:
         parts = [c.strip() for c in collocs.split(";") if c.strip()][:3]
@@ -151,7 +185,6 @@ def render_answer(word, index, total):
                 lines.append(f"  • {c}")
             lines.append("")
 
-    # Synonyms / Antonyms
     syn = word.get("synonyms", "")
     ant = word.get("antonyms", "")
     if syn:
@@ -161,22 +194,12 @@ def render_answer(word, index, total):
     if syn or ant:
         lines.append("")
 
-    # Mini dialogue
     dialogue = word.get("mini_dialogue", "")
     if dialogue:
         lines.append("💬 <b>Диалог:</b>")
         lines.append(f"<i>{dialogue}</i>")
         lines.append("")
 
-    # Original example & category
-    example = word.get("example", "")
-    if example:
-        lines.append(f"📌 <b>Пример:</b> <i>{example}</i>")
-    category = word.get("category", "")
-    if category:
-        lines.append(f"📂 <b>Категория:</b> {category}")
-
-    # Meta info
     meta_parts = []
     level = word.get("level", "")
     if level:
@@ -187,24 +210,24 @@ def render_answer(word, index, total):
     frequency = word.get("frequency", "")
     if frequency:
         meta_parts.append(f"⚡ {frequency}")
-    source = word.get("source", "")
-    if source:
-        meta_parts.append(f"📖 {source}")
     if meta_parts:
-        lines.append("")
         lines.append(" · ".join(meta_parts))
-
-    notes = word.get("notes", "")
-    if notes:
-        lines.append(f"💡 {notes}")
 
     text = "\n".join(lines)
     if len(text) > 4000:
         text = text[:3990] + "\n..."
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Прочёл вслух!", callback_data="read_aloud")],
-    ])
+    if rep >= 1:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Помню", callback_data="know")],
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("✅ Помню", callback_data="know"),
+                InlineKeyboardButton("🆕 Новое слово", callback_data="new_word"),
+            ],
+        ])
     return text, keyboard
 
 
@@ -215,24 +238,23 @@ def render_topic_menu(user_id):
     topic_progress = get_topic_stats(DB, user_id, vocab)
 
     settings = get_user_settings(DB, user_id)
-    half = settings["day_counter"] % 2
-    half_label = "A" if half == 0 else "B"
     session_num = settings["total_sessions"] + 1
 
     lines = [
         "📖 <b>Темы</b>\n",
-        f"Половина <b>{half_label}</b> · Сессия #{session_num}\n",
+        f"Сессия #{session_num}\n",
     ]
 
     buttons = []
     for topic in sorted(topic_counts.keys()):
         emoji, label = TOPIC_LABELS.get(topic, ("📌", topic))
         total = topic_counts[topic]
-        seen = topic_progress.get(topic, {}).get("seen", 0)
-        learned = topic_progress.get(topic, {}).get("learned", 0)
-        due = topic_progress.get(topic, {}).get("due", 0)
+        tp = topic_progress.get(topic, {})
+        seen = tp.get("seen", 0)
+        learned = tp.get("learned", 0)
+        known = tp.get("known", 0)
+        due = tp.get("due", 0)
 
-        # Progress bar
         pct = int(seen / total * 100) if total else 0
         bar = "▓" * (pct // 10) + "░" * (10 - pct // 10)
 
@@ -249,12 +271,10 @@ def render_topic_menu(user_id):
             InlineKeyboardButton(btn_text, callback_data=f"topic:{topic}")
         )
 
-    # Build keyboard: 2 buttons per row
     keyboard_rows = []
     for i in range(0, len(buttons), 2):
         keyboard_rows.append(buttons[i : i + 2])
 
-    # Add "All topics" at the bottom
     keyboard_rows.append(
         [InlineKeyboardButton("📚 Все темы (случайно)", callback_data="topic:all")]
     )
@@ -268,21 +288,13 @@ def render_session_summary(stats, session_count, topic):
     lines = [
         f"📊 <b>Сессия завершена!</b> {emoji} {label}\n",
         f"✅ Слов в сессии: {session_count}",
-        f"📚 Всего изучено: {stats['total_seen']}",
+        f"👁 Всего просмотрено: {stats['total_seen']}",
+        f"✅ Помню: {stats['known']}",
+        f"🆕 В цикле повторений: {stats['in_cycle']}",
         f"🎓 Выучено (9/9): {stats['learned']}",
-        f"🔄 В процессе: {stats['in_progress']}",
         f"📅 На повторение сегодня: {stats['due_today']}",
         f"\n🏆 Всего сессий: {stats['total_sessions']}",
     ]
-
-    by_rep = stats.get("by_repetition", {})
-    if by_rep:
-        lines.append("\n<b>Прогресс:</b>")
-        for rep in range(1, 10):
-            count = by_rep.get(rep, 0)
-            if count > 0:
-                bar = "█" * min(count // 5, 20)
-                lines.append(f"  {rep}/9: {bar} {count}")
 
     lines.append("\n/learn — выбрать тему")
     return "\n".join(lines)
@@ -297,12 +309,12 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = (
         "🇬🇷 <b>Greek Vocabulary Bot</b>\n\n"
-        f"📚 {len(vocab)} слов · 14 тем · Γ2 + B2\n\n"
-        "<b>Метод Брежестовского:</b>\n"
-        "• 9 повторений за 23 дня\n"
-        "• Каждую сессию — новая половина слов\n"
-        "• Читай вслух каждое слово!\n\n"
-        "<i>Запоминание = Контекст × Повторения × Вслух</i>\n\n"
+        f"📚 {len(vocab)} слов · {len(get_topics(vocab))} тем · Γ2 + B2\n\n"
+        "<b>Как это работает:</b>\n"
+        "• Видишь слово → вспоминаешь значение\n"
+        "• <b>Помню</b> — знаешь слово, идём дальше\n"
+        "• <b>Новое слово</b> — не знаешь, слово попадает в цикл 9 повторений\n"
+        "• Новые слова будут появляться чаще!\n\n"
         "/learn — выбрать тему и начать\n"
         "/stats — прогресс\n"
         "/reset — сбросить"
@@ -311,14 +323,12 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def learn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show topic menu."""
     user_id = update.effective_user.id
     text, keyboard = render_topic_menu(user_id)
     await update.message.reply_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 async def topic_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """User selected a topic — build session and show first card."""
     query = update.callback_query
     await query.answer()
 
@@ -331,19 +341,19 @@ async def topic_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not words:
         emoji, label = TOPIC_LABELS.get(topic, ("📌", topic))
         await query.edit_message_text(
-            f"🎉 {emoji} <b>{label}</b> — все слова уже на повторении!\n\n"
+            f"🎉 {emoji} <b>{label}</b> — все слова просмотрены!\n\n"
             "/learn — выбрать другую тему",
             parse_mode="HTML",
         )
         return
 
-    # Get repetition info for each word
+    # Get repetition info
     for w in words:
         row = DB.execute(
             "SELECT repetition FROM user_progress WHERE user_id = ? AND word_index = ?",
             (user_id, w["_index"]),
         ).fetchone()
-        w["_rep"] = row["repetition"] if row and row["repetition"] > 0 else 0
+        w["_rep"] = row["repetition"] if row and row["repetition"] >= 1 else 0
 
     context.user_data["session_words"] = words
     context.user_data["current_index"] = 0
@@ -371,7 +381,22 @@ async def show_answer_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
-async def read_aloud_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_details_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    words = context.user_data.get("session_words", [])
+    idx = context.user_data.get("current_index", 0)
+
+    if not words or idx >= len(words):
+        return
+
+    text, keyboard = render_answer_full(words[idx], idx, len(words))
+    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
+
+
+async def know_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User pressed 'Помню'."""
     query = update.callback_query
     await query.answer("✅")
 
@@ -383,8 +408,37 @@ async def read_aloud_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not words or idx >= len(words):
         return
 
-    record_review(DB, user_id, words[idx]["_index"])
+    word = words[idx]
+    if word.get("_rep", 0) >= 1:
+        # In review cycle — advance repetition
+        record_review(DB, user_id, word["_index"])
+    else:
+        # Unseen word — mark as known
+        mark_known(DB, user_id, word["_index"])
 
+    _advance_session(query, context, words, idx, topic)
+
+
+async def new_word_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User pressed 'Новое слово' — start 9-rep cycle."""
+    query = update.callback_query
+    await query.answer("🆕")
+
+    words = context.user_data.get("session_words", [])
+    idx = context.user_data.get("current_index", 0)
+    user_id = update.effective_user.id
+    topic = context.user_data.get("session_topic", "all")
+
+    if not words or idx >= len(words):
+        return
+
+    mark_new_word(DB, user_id, words[idx]["_index"])
+
+    _advance_session(query, context, words, idx, topic)
+
+
+async def _advance_session(query, context, words, idx, topic):
+    user_id = query.from_user.id
     next_idx = idx + 1
     context.user_data["current_index"] = next_idx
 
@@ -403,30 +457,14 @@ async def read_aloud_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def skip_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Skip current word without recording review."""
     query = update.callback_query
     await query.answer("⏭")
 
     words = context.user_data.get("session_words", [])
     idx = context.user_data.get("current_index", 0)
-    user_id = update.effective_user.id
     topic = context.user_data.get("session_topic", "all")
 
-    next_idx = idx + 1
-    context.user_data["current_index"] = next_idx
-
-    if not words or next_idx >= len(words):
-        increment_session(DB, user_id)
-        stats = get_stats(DB, user_id)
-        summary = render_session_summary(stats, len(words), topic)
-        await query.edit_message_text(summary, parse_mode="HTML")
-        return
-
-    emoji, label = TOPIC_LABELS.get(topic, ("📌", topic))
-    topic_label = f"{emoji} {label}"
-
-    text, keyboard = render_question(words[next_idx], next_idx, len(words), topic_label)
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode="HTML")
+    _advance_session(query, context, words, idx, topic)
 
 
 async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -439,9 +477,10 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = [
         "📊 <b>Твой прогресс</b>\n",
         f"📚 Словарь: {len(vocab)} слов",
-        f"👁 Изучено: {stats['total_seen']}",
+        f"👁 Просмотрено: {stats['total_seen']}",
+        f"✅ Помню: {stats['known']}",
+        f"🆕 В цикле повторений: {stats['in_cycle']}",
         f"🎓 Выучено (9/9): {stats['learned']}",
-        f"🔄 В процессе: {stats['in_progress']}",
         f"📅 На повтор сегодня: {stats['due_today']}",
         f"🏆 Сессий: {stats['total_sessions']}",
         "",
@@ -451,8 +490,9 @@ async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for topic in sorted(topic_counts.keys()):
         emoji, label = TOPIC_LABELS.get(topic, ("📌", topic))
         total = topic_counts[topic]
-        seen = topic_progress.get(topic, {}).get("seen", 0)
-        learned = topic_progress.get(topic, {}).get("learned", 0)
+        tp = topic_progress.get(topic, {})
+        seen = tp.get("seen", 0)
+        learned = tp.get("learned", 0)
         if seen > 0:
             lines.append(f"  {emoji} {label}: {seen}/{total} (🎓{learned})")
 
@@ -492,7 +532,6 @@ async def reset_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def post_init(app: Application):
-    """Set bot commands menu."""
     await app.bot.set_my_commands([
         BotCommand("learn", "📖 Выбрать тему и учить"),
         BotCommand("stats", "📊 Мой прогресс"),
@@ -520,7 +559,9 @@ def main():
 
     app.add_handler(CallbackQueryHandler(topic_callback, pattern=r"^topic:"))
     app.add_handler(CallbackQueryHandler(show_answer_callback, pattern=r"^show_answer$"))
-    app.add_handler(CallbackQueryHandler(read_aloud_callback, pattern=r"^read_aloud$"))
+    app.add_handler(CallbackQueryHandler(show_details_callback, pattern=r"^show_details$"))
+    app.add_handler(CallbackQueryHandler(know_callback, pattern=r"^know$"))
+    app.add_handler(CallbackQueryHandler(new_word_callback, pattern=r"^new_word$"))
     app.add_handler(CallbackQueryHandler(skip_callback, pattern=r"^skip$"))
     app.add_handler(CallbackQueryHandler(reset_confirm_callback, pattern=r"^reset_confirm$"))
     app.add_handler(CallbackQueryHandler(reset_cancel_callback, pattern=r"^reset_cancel$"))

@@ -1,12 +1,13 @@
 """
 CSV vocabulary loader and session word selection logic.
-Three-queue system: REVIEW → NEW → LEARNED.
+Session priority: REVIEW (due words in 9-rep cycle) → UNSEEN (new words).
 """
 import csv
 import os
+import random
 
 VOCAB_PATH = os.path.join(
-    os.path.dirname(__file__), "data", "enriched", "unified_vocabulary.csv"
+    os.path.dirname(__file__), "data", "enriched", "unified_vocabulary_enriched.csv"
 )
 
 _vocabulary = None
@@ -21,7 +22,7 @@ def load_vocabulary(path=None):
     with open(path, encoding="utf-8") as f:
         reader = csv.DictReader(f)
         rows = []
-        for i, row in enumerate(reader):
+        for row in reader:
             if row.get("greek", "").startswith("---"):
                 continue
             row["_index"] = len(rows)
@@ -33,8 +34,7 @@ def load_vocabulary(path=None):
 
 def get_topics(vocab=None):
     vocab = vocab or load_vocabulary()
-    topics = sorted({r["topic"] for r in vocab if r.get("topic")})
-    return topics
+    return sorted({r["topic"] for r in vocab if r.get("topic")})
 
 
 def get_word_indices_by_topic(topic="all", vocab=None):
@@ -45,45 +45,36 @@ def get_word_indices_by_topic(topic="all", vocab=None):
 
 
 def get_session_words(db_conn, user_id, topic="all", count=15):
-    """Build a session of up to `count` words using three-queue priority."""
-    from database import (
-        get_current_half,
-        get_review_words,
-        get_new_words,
-        assign_halves,
-    )
+    """Build a session: review words first, then unseen words."""
+    from database import get_review_words, get_known_and_learning
 
     vocab = load_vocabulary()
-    word_indices = get_word_indices_by_topic(topic, vocab)
-
-    # Ensure halves are assigned
-    assign_halves(db_conn, user_id, word_indices)
+    topic_indices = set(get_word_indices_by_topic(topic, vocab))
+    known, learning = get_known_and_learning(db_conn, user_id)
+    seen = known | learning
 
     session = []
 
-    # Queue 1: REVIEW — words due for repetition
+    # Queue 1: words in 9-rep cycle that are due for review
     review_indices = get_review_words(db_conn, user_id, limit=count)
-    # Filter to current topic if not "all"
     if topic != "all":
-        topic_set = set(word_indices)
-        review_indices = [i for i in review_indices if i in topic_set]
-    session.extend(review_indices[:count])
+        review_indices = [i for i in review_indices if i in topic_indices]
+    for i in review_indices:
+        if len(session) >= count:
+            break
+        session.append(i)
 
-    # Queue 2: NEW — unseen words for current half
+    # Queue 2: unseen words (random order)
     remaining = count - len(session)
     if remaining > 0:
-        half = get_current_half(db_conn, user_id)
-        new_indices = get_new_words(
-            db_conn, user_id, half, word_indices, limit=remaining
-        )
-        session.extend(new_indices)
+        unseen = [i for i in topic_indices if i not in seen]
+        random.shuffle(unseen)
+        session.extend(unseen[:remaining])
 
-    # Build word dicts
     return [vocab[i] for i in session]
 
 
 def get_topic_counts(vocab=None):
-    """Return {topic: word_count} for all topics."""
     vocab = vocab or load_vocabulary()
     counts = {}
     for row in vocab:

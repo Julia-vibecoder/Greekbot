@@ -1,6 +1,7 @@
 """
-SQLite persistence for user progress and spaced repetition scheduling.
-Brezhestovsky method: 9 repetitions over 23 days.
+SQLite persistence for user progress and spaced repetition.
+Words marked "Новое слово" enter a 9-repetition cycle (Brezhestovsky method).
+Words marked "Помню" are skipped.
 """
 import sqlite3
 from datetime import date, timedelta
@@ -74,84 +75,74 @@ def set_topic(conn, user_id, topic):
 def increment_session(conn, user_id):
     get_user_settings(conn, user_id)
     conn.execute(
-        "UPDATE user_settings SET day_counter = day_counter + 1, "
-        "total_sessions = total_sessions + 1 WHERE user_id = ?",
+        "UPDATE user_settings SET total_sessions = total_sessions + 1 "
+        "WHERE user_id = ?",
         (user_id,),
     )
     conn.commit()
 
 
-def get_current_half(conn, user_id):
-    settings = get_user_settings(conn, user_id)
-    return settings["day_counter"] % 2
-
-
-def assign_halves(conn, user_id, word_indices):
-    """Assign alternating halves (0/1) to words not yet in user_progress."""
-    existing = set()
-    for row in conn.execute(
-        "SELECT word_index FROM user_progress WHERE user_id = ?", (user_id,)
-    ):
-        existing.add(row["word_index"])
-
-    new_indices = [i for i in word_indices if i not in existing]
-    if not new_indices:
-        return
-
-    rows = []
-    for i, idx in enumerate(new_indices):
-        half = i % 2
-        rows.append((user_id, idx, 0, None, None, half))
-
-    conn.executemany(
-        "INSERT OR IGNORE INTO user_progress "
-        "(user_id, word_index, repetition, next_review, last_reviewed, half) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        rows,
-    )
-    conn.commit()
-
-
 def get_review_words(conn, user_id, today=None, limit=15):
-    """Words due for review (next_review <= today, repetition < 9)."""
+    """Words due for review (next_review <= today, repetition 1..8)."""
     if today is None:
         today = date.today().isoformat()
     rows = conn.execute(
         "SELECT word_index FROM user_progress "
-        "WHERE user_id = ? AND next_review <= ? AND repetition < 9 "
+        "WHERE user_id = ? AND next_review <= ? "
+        "AND repetition >= 1 AND repetition < 9 "
         "ORDER BY next_review ASC LIMIT ?",
         (user_id, today, limit),
     ).fetchall()
     return [r["word_index"] for r in rows]
 
 
-def get_new_words(conn, user_id, half, word_indices, limit=15):
-    """Unseen words for the given half."""
-    seen = set()
-    for row in conn.execute(
-        "SELECT word_index FROM user_progress "
+def get_known_and_learning(conn, user_id):
+    """Return sets of word indices that user has already seen."""
+    rows = conn.execute(
+        "SELECT word_index, repetition FROM user_progress "
         "WHERE user_id = ? AND next_review IS NOT NULL",
         (user_id,),
-    ):
-        seen.add(row["word_index"])
+    ).fetchall()
+    known = set()      # marked "помню" (rep=0 with next_review set) or learned (rep=9)
+    learning = set()   # in 9-rep cycle (rep 1..8)
+    for r in rows:
+        if r["repetition"] >= 1 and r["repetition"] < 9:
+            learning.add(r["word_index"])
+        else:
+            known.add(r["word_index"])
+    return known, learning
 
-    results = []
-    for idx in word_indices:
-        if idx in seen:
-            continue
-        row = conn.execute(
-            "SELECT half FROM user_progress WHERE user_id = ? AND word_index = ?",
-            (user_id, idx),
-        ).fetchone()
-        if row and row["half"] == half:
-            results.append(idx)
-            if len(results) >= limit:
-                break
-    return results
+
+def mark_known(conn, user_id, word_index):
+    """User pressed 'Помню' — mark word as known, skip it in future."""
+    today_str = date.today().isoformat()
+    conn.execute(
+        "INSERT INTO user_progress (user_id, word_index, repetition, next_review, last_reviewed, half) "
+        "VALUES (?, ?, 0, ?, ?, 0) "
+        "ON CONFLICT(user_id, word_index) DO UPDATE SET "
+        "last_reviewed = ?",
+        (user_id, word_index, today_str, today_str, today_str),
+    )
+    conn.commit()
+
+
+def mark_new_word(conn, user_id, word_index):
+    """User pressed 'Новое слово' — start 9-repetition cycle."""
+    today = date.today()
+    today_str = today.isoformat()
+    next_review = (today + timedelta(days=INTERVALS[1])).isoformat()
+    conn.execute(
+        "INSERT INTO user_progress (user_id, word_index, repetition, next_review, last_reviewed, half) "
+        "VALUES (?, ?, 1, ?, ?, 0) "
+        "ON CONFLICT(user_id, word_index) DO UPDATE SET "
+        "repetition = 1, next_review = ?, last_reviewed = ?",
+        (user_id, word_index, next_review, today_str, next_review, today_str),
+    )
+    conn.commit()
 
 
 def record_review(conn, user_id, word_index):
-    """Record that user read the word aloud. Advance repetition."""
+    """Advance repetition for a word in the 9-rep cycle."""
     today = date.today()
     today_str = today.isoformat()
 
@@ -161,18 +152,13 @@ def record_review(conn, user_id, word_index):
         (user_id, word_index),
     ).fetchone()
 
-    if row is None:
-        rep = 0
-    else:
-        rep = row["repetition"]
-
+    rep = row["repetition"] if row else 0
     new_rep = min(rep + 1, 9)
 
     if new_rep < 9:
         interval = INTERVALS[new_rep]
         next_review = (today + timedelta(days=interval)).isoformat()
     else:
-        # Learned — review in 30 days
         next_review = (today + timedelta(days=30)).isoformat()
 
     conn.execute(
@@ -188,8 +174,8 @@ def record_review(conn, user_id, word_index):
 
 
 def get_stats(conn, user_id):
-    """User progress statistics."""
     settings = get_user_settings(conn, user_id)
+    today = date.today().isoformat()
 
     rows = conn.execute(
         "SELECT repetition, COUNT(*) as cnt FROM user_progress "
@@ -200,19 +186,22 @@ def get_stats(conn, user_id):
 
     by_rep = {r["repetition"]: r["cnt"] for r in rows}
     total_seen = sum(by_rep.values())
+    known = by_rep.get(0, 0)
     learned = by_rep.get(9, 0)
+    in_cycle = total_seen - known - learned
 
-    today = date.today().isoformat()
     due_today = conn.execute(
         "SELECT COUNT(*) as cnt FROM user_progress "
-        "WHERE user_id = ? AND next_review <= ? AND repetition < 9",
+        "WHERE user_id = ? AND next_review <= ? "
+        "AND repetition >= 1 AND repetition < 9",
         (user_id, today),
     ).fetchone()["cnt"]
 
     return {
         "total_seen": total_seen,
+        "known": known,
         "learned": learned,
-        "in_progress": total_seen - learned,
+        "in_cycle": in_cycle,
         "due_today": due_today,
         "total_sessions": settings["total_sessions"],
         "by_repetition": by_rep,
@@ -220,9 +209,7 @@ def get_stats(conn, user_id):
 
 
 def get_topic_stats(conn, user_id, vocab):
-    """Per-topic progress: {topic: {seen, learned, due}}."""
     from datetime import date as _date
-
     today = _date.today().isoformat()
 
     rows = conn.execute(
@@ -231,7 +218,6 @@ def get_topic_stats(conn, user_id, vocab):
         (user_id,),
     ).fetchall()
 
-    # Build word_index → topic map
     idx_topic = {}
     for w in vocab:
         t = w.get("topic", "")
@@ -244,11 +230,13 @@ def get_topic_stats(conn, user_id, vocab):
         if not topic:
             continue
         if topic not in stats:
-            stats[topic] = {"seen": 0, "learned": 0, "due": 0}
+            stats[topic] = {"seen": 0, "learned": 0, "due": 0, "known": 0}
         stats[topic]["seen"] += 1
-        if r["repetition"] >= 9:
+        if r["repetition"] == 0:
+            stats[topic]["known"] += 1
+        elif r["repetition"] >= 9:
             stats[topic]["learned"] += 1
-        if r["next_review"] <= today and r["repetition"] < 9:
+        if r["next_review"] and r["next_review"] <= today and 1 <= r["repetition"] < 9:
             stats[topic]["due"] += 1
 
     return stats
