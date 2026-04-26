@@ -56,9 +56,8 @@ def get_session_words(db_conn, user_id, topic="all", count=15):
     session = []
 
     # Queue 1: words in 9-rep cycle that are due for review
+    # Show ALL due review words regardless of topic — otherwise they get stuck forever
     review_indices = get_review_words(db_conn, user_id, limit=count)
-    if topic != "all":
-        review_indices = [i for i in review_indices if i in topic_indices]
     for i in review_indices:
         if len(session) >= count:
             break
